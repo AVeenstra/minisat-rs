@@ -2,24 +2,22 @@
 //! Solves a boolean satisfiability problem given in conjunctive normal form.
 //!
 //! ```rust
-//! extern crate minisat;
 //! use std::iter::once;
-//! fn main() {
-//!     let mut sat = minisat::Solver::new();
-//!     let a = sat.new_lit();
-//!     let b = sat.new_lit();
 //!
-//!     // Solves ((a OR not b) AND b)
-//!     sat.add_clause(vec![a, !b]);
-//!     sat.add_clause(vec![b]);
+//! let mut sat = minisat::Solver::new();
+//! let a = sat.new_lit();
+//! let b = sat.new_lit();
 //!
-//!     match sat.solve() {
-//!         Ok(m) => {
-//!             assert_eq!(m.value(&a), true);
-//!             assert_eq!(m.value(&b), true);
-//!         },
-//!         Err(()) => panic!("UNSAT"),
-//!     }
+//! // Solves ((a OR not b) AND b)
+//! sat.add_clause(vec![a, !b]);
+//! sat.add_clause(vec![b]);
+//!
+//! match sat.solve() {
+//!     Ok(m) => {
+//!         assert_eq!(m.value(&a), true);
+//!         assert_eq!(m.value(&b), true);
+//!     },
+//!     Err(()) => panic!("UNSAT"),
 //! }
 //! ```
 //!
@@ -38,55 +36,50 @@
 //!
 //! Graph coloring example:
 //! ```rust
-//! extern crate minisat;
 //! use std::iter::once;
 //! use minisat::symbolic::*;
-//! fn main() {
-//!     let mut coloring = minisat::Solver::new();
 //!
-//!     #[derive(PartialEq, Eq, Debug, PartialOrd, Ord)]
-//!     enum Color { Red, Green, Blue };
+//! let mut coloring = minisat::Solver::new();
 //!
-//!     let n_nodes = 5;
-//!     let edges = vec![(0,1),(1,2),(2,3),(3,4),(3,1),(4,0),(4,2)];
-//!     let colors = (0..n_nodes)
-//!         .map(|_| Symbolic::new(&mut coloring, vec![Color::Red, Color::Green, Color::Blue]))
-//!         .collect::<Vec<_>>();
-//!     for (n1,n2) in edges {
-//!         coloring.not_equal(&colors[n1],&colors[n2]);
-//!     }
-//!     match coloring.solve() {
-//!         Ok(model) => {
-//!             for i in 0..n_nodes {
-//!                 println!("Node {}: {:?}", i, model.value(&colors[i]));
-//!             }
-//!         },
-//!         Err(()) => {
-//!             println!("No solution.");
+//! #[derive(PartialEq, Eq, Debug, PartialOrd, Ord)]
+//! enum Color { Red, Green, Blue };
+//!
+//! let n_nodes = 5;
+//! let edges = vec![(0,1),(1,2),(2,3),(3,4),(3,1),(4,0),(4,2)];
+//! let colors = (0..n_nodes)
+//!     .map(|_| Symbolic::new(&mut coloring, vec![Color::Red, Color::Green, Color::Blue]))
+//!     .collect::<Vec<_>>();
+//! for (n1,n2) in edges {
+//!     coloring.not_equal(&colors[n1],&colors[n2]);
+//! }
+//! match coloring.solve() {
+//!     Ok(model) => {
+//!         for i in 0..n_nodes {
+//!             println!("Node {}: {:?}", i, model.value(&colors[i]));
 //!         }
+//!     },
+//!     Err(()) => {
+//!         println!("No solution.");
 //!     }
 //! }
 //! ```
 //!
 //! Factorization example:
 //! ```rust
-//! extern crate minisat;
 //! use minisat::{*, binary::*};
 //!
-//! fn main() {
-//!     let mut sat = Solver::new();
-//!     let a = Binary::new(&mut sat, 1000);
-//!     let b = Binary::new(&mut sat, 1000);
-//!     let c = a.mul(&mut sat, &b);
-//!     sat.equal(&c, &Binary::constant(36863));
+//! let mut sat = Solver::new();
+//! let a = Binary::new(&mut sat, 1000);
+//! let b = Binary::new(&mut sat, 1000);
+//! let c = a.mul(&mut sat, &b);
+//! sat.equal(&c, &Binary::constant(36863));
 //!
-//!     match sat.solve() {
-//!         Ok(model) => {
-//!             println!("{}*{}=36863", model.value(&a), model.value(&b));
-//!         },
-//!         Err(()) => {
-//!             println!("No solution.");
-//!         }
+//! match sat.solve() {
+//!     Ok(model) => {
+//!         println!("{}*{}=36863", model.value(&a), model.value(&b));
+//!     },
+//!     Err(()) => {
+//!         println!("No solution.");
 //!     }
 //! }
 //! ```
@@ -94,13 +87,11 @@
 //! Sudoku solver, based on the article [Modern SAT solvers: fast, neat and underused (part 1 of N)](https://codingnest.com/modern-sat-solvers-fast-neat-underused-part-1-of-n/). It uses the [sudoku crate](https://docs.rs/sudoku) for generating and displaying boards.
 //!
 //! ```rust
-//! extern crate itertools;
-//! extern crate sudoku;
 //! use itertools::iproduct;
 //! use minisat::Solver;
 //! use minisat::symbolic::Symbolic;
 //! use sudoku::Sudoku;
-//! 
+//!
 //! pub fn solve_sudoku(problem: &str) -> Option<String> {
 //!     let mut s = Solver::new();
 //!     let matrix = problem.chars().map(|c| {
@@ -110,7 +101,7 @@
 //!             Symbolic::new(&mut s, (0..9).collect())
 //!         }
 //!     }).collect::<Vec<_>>();
-//! 
+//!
 //!     for val in 0..9 {
 //!         // Rule 1: no row contains duplicate numbers
 //!         for x in 0..9 {
@@ -128,43 +119,28 @@
 //!             );
 //!         }
 //!     }
-//! 
+//!
 //!     s.solve().ok().map(|m| {
 //!         matrix.into_iter()
 //!             .map(|v| format!("{}", m.value(&v) + 1))
 //!             .collect()
 //!     })
 //! }
-//! 
-//! 
-//! 
-//! fn main() {
-//!     let puzzle = Sudoku::generate_unique();
-//!     println!("{}", puzzle.display_block());
-//! 
-//!     let solution = solve_sudoku(&puzzle.to_str_line()).expect("Unable to solve puzzle");
-//!     let solved_puzzle = Sudoku::from_str_line(&solution).expect("Unable to parse puzzle");
-//! 
-//!     println!("{}", solved_puzzle.display_block());
-//!     assert!(solved_puzzle.is_solved());
-//! }
+//!
+//!
+//! let puzzle = Sudoku::generate_unique();
+//! println!("{}", puzzle.display_block());
+//!
+//! let solution = solve_sudoku(&puzzle.to_str_line()).expect("Unable to solve puzzle");
+//! let solved_puzzle = Sudoku::from_str_line(&solution).expect("Unable to parse puzzle");
+//!
+//! println!("{}", solved_puzzle.display_block());
+//! assert!(solved_puzzle.is_solved());
 //! ```
-
-
 
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-
-//  #![cfg_attr(test, feature(plugin))]
-// ![cfg_attr(test, plugin(quickcheck_macros))]
-
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-
-
-extern crate itertools;
 
 /// The FFI interface to MiniSat (imported from
 /// [minisat-c-bindings](https://github.com/niklasso/minisat-c-bindings)).
@@ -180,11 +156,11 @@ mod model_ord;
 pub use model_eq::*;
 pub use model_ord::*;
 
-/// Unary encoding of non-negative integers (see `Unary`).
-pub mod unary;
 ///
 /// Binary encoding of non-negative integers (see `Binary`).
 pub mod binary;
+/// Unary encoding of non-negative integers (see `Unary`).
+pub mod unary;
 
 /// Symbolic values (see the struct `Symbolic<V>`).
 pub mod symbolic;
@@ -212,7 +188,10 @@ pub struct Lit(*mut minisat_solver_t, minisat_Lit);
 
 impl Lit {
     fn into_var(self) -> (minisat_Var, bool) {
-        (unsafe { minisat_var(self.1) }, unsafe { minisat_sign(self.1) } > 0)
+        (
+            unsafe { minisat_var(self.1) },
+            unsafe { minisat_sign(self.1) } > 0,
+        )
     }
 
     fn from_var_sign(s: *mut minisat_solver_t, var: minisat_Var, neg: bool) -> Lit {
@@ -247,9 +226,6 @@ impl Not for Lit {
     }
 }
 
-
-
-
 impl Solver {
     /// Create a new SAT solver instance.
     pub fn new() -> Self {
@@ -258,7 +234,7 @@ impl Solver {
         // "normal solver"??? (cfr. haskell minisat-0.1.2 newSolver)
         unsafe { minisat_eliminate(ptr, 1 as i32) };
 
-        Solver { ptr: ptr }
+        Solver { ptr }
     }
 
     /// Create a fresh boolean variable.
@@ -287,7 +263,7 @@ impl Solver {
     /// Solve the SAT instance, returning a solution (`Model`) if the
     /// instance is satisfiable, or returning an `Err(())` if the problem
     /// is unsatisfiable.
-    pub fn solve<'a>(&'a mut self) -> Result<Model<'a>, ()> {
+    pub fn solve(&mut self) -> Result<Model, ()> {
         self.solve_under_assumptions(empty())
     }
 
@@ -299,9 +275,10 @@ impl Solver {
     /// so the result is the same as if each literal was added as a clause, but
     /// the solver object can be re-used afterwards and does then not contain these assumptions.
     /// This interface can be used to build SAT instances incrementally.
-    pub fn solve_under_assumptions<'a, I: IntoIterator<Item = Bool>>(&'a mut self,
-                                                                     lits: I)
-                                                                     -> Result<Model<'a>, ()> {
+    pub fn solve_under_assumptions<I: IntoIterator<Item = Bool>>(
+        &mut self,
+        lits: I,
+    ) -> Result<Model, ()> {
         unsafe {
             minisat_solve_begin(self.ptr);
         }
@@ -318,7 +295,11 @@ impl Solver {
             }
         }
         let sat = unsafe { minisat_solve_commit(self.ptr) } > 0;
-        if sat { Ok(Model(self)) } else { Err(()) }
+        if sat {
+            Ok(Model(self))
+        } else {
+            Err(())
+        }
     }
 
     /// Return a literal representing the conjunction of the given booleans.
@@ -342,7 +323,7 @@ impl Solver {
             }
         }
 
-        if lits.len() == 0 {
+        if lits.is_empty() {
             return true.into();
         }
         if lits.len() == 1 {
@@ -405,30 +386,42 @@ impl Solver {
 
     /// Assert that the odd parity bit of the given list of booleans has the given value,
     /// except if any of the values in `prefix` are true.
-    pub fn assert_parity_or<I:IntoIterator<Item = Bool>,
-                            J:IntoIterator<Item = Bool>>
-                                (&mut self, prefix :I, xs :J, c :bool) {
+    pub fn assert_parity_or<I: IntoIterator<Item = Bool>, J: IntoIterator<Item = Bool>>(
+        &mut self,
+        prefix: I,
+        xs: J,
+        c: bool,
+    ) {
         let mut xs = xs.into_iter().collect::<Vec<_>>();
         let prefix = prefix.into_iter().collect::<Vec<_>>();
-        if xs.len() == 0 {
+        if xs.is_empty() {
             if c {
                 self.add_clause(prefix);
             } // else nothing
         } else if xs.len() <= 5 {
             let x = xs.pop().unwrap();
-            self.assert_parity_or(prefix.iter().cloned().chain(once(!x)),
-                                  xs.iter().cloned(),
-                                  !c);
+            self.assert_parity_or(
+                prefix.iter().cloned().chain(once(!x)),
+                xs.iter().cloned(),
+                !c,
+            );
             self.assert_parity_or(prefix.iter().cloned().chain(once(x)), xs.iter().cloned(), c);
         } else {
             let x = self.new_lit();
             let k = xs.len() / 2;
-            self.assert_parity_or(prefix.iter().cloned(),
-                                  xs.iter().cloned().take(k).chain(once(x)),
-                                  c);
-            self.assert_parity_or(prefix.iter().cloned(),
-                                  xs.iter().cloned().skip(k).chain(once(if c { !x } else { x })),
-                                  c);
+            self.assert_parity_or(
+                prefix.iter().cloned(),
+                xs.iter().cloned().take(k).chain(once(x)),
+                c,
+            );
+            self.assert_parity_or(
+                prefix.iter().cloned(),
+                xs.iter()
+                    .cloned()
+                    .skip(k)
+                    .chain(once(if c { !x } else { x })),
+                c,
+            );
         }
     }
 
@@ -461,19 +454,26 @@ impl Solver {
         let out = posneg[0]
             .iter()
             .map(|x| Bool::Lit(Lit::from_var_sign(self.ptr, *x, false)))
-            .chain(posneg[1].iter().map(|x| Bool::Lit(Lit::from_var_sign(self.ptr, *x, true))))
+            .chain(
+                posneg[1]
+                    .iter()
+                    .map(|x| Bool::Lit(Lit::from_var_sign(self.ptr, *x, true))),
+            )
             .collect::<Vec<_>>();
-        if out.len() == 0 {
+        if out.is_empty() {
             const_parity.into()
         } else if out.len() == 1 {
-            if const_parity { !out[0] } else { out[0] }
+            if const_parity {
+                !out[0]
+            } else {
+                out[0]
+            }
         } else {
             let y = self.new_lit();
             self.assert_parity(once(y).chain(out.into_iter()), const_parity);
             y
         }
     }
-
 
     /// Assert the equality of the given objects.
     pub fn equal<T: ModelEq>(&mut self, a: &T, b: &T) {
@@ -506,34 +506,42 @@ impl Solver {
     }
 
     /// Assert `a > b` unless any of the booleans in the given `prefix` are true.
-    pub fn greater_than_or<T: ModelOrd, I: IntoIterator<Item = Bool>>(&mut self,
-                                                                      prefix: I,
-                                                                      a: &T,
-                                                                      b: &T) {
+    pub fn greater_than_or<T: ModelOrd, I: IntoIterator<Item = Bool>>(
+        &mut self,
+        prefix: I,
+        a: &T,
+        b: &T,
+    ) {
         self.less_than_or(prefix, b, a);
     }
 
     /// Assert `a >= b` unless any of the booleans in the given `prefix` are true.
-    pub fn greater_than_equal_or<T: ModelOrd, I: IntoIterator<Item = Bool>>(&mut self,
-                                                                            prefix: I,
-                                                                            a: &T,
-                                                                            b: &T) {
+    pub fn greater_than_equal_or<T: ModelOrd, I: IntoIterator<Item = Bool>>(
+        &mut self,
+        prefix: I,
+        a: &T,
+        b: &T,
+    ) {
         self.less_than_equal_or(prefix, b, a);
     }
 
     /// Assert `a < b` unless any of the booleans in the given `prefix` are true.
-    pub fn less_than_or<T: ModelOrd, I: IntoIterator<Item = Bool>>(&mut self,
-                                                                   prefix: I,
-                                                                   a: &T,
-                                                                   b: &T) {
+    pub fn less_than_or<T: ModelOrd, I: IntoIterator<Item = Bool>>(
+        &mut self,
+        prefix: I,
+        a: &T,
+        b: &T,
+    ) {
         T::assert_less_or(self, prefix.into_iter().collect(), false, a, b);
     }
 
     /// Assert `a <= b` unless any of the booleans in the given `prefix` are true.
-    pub fn less_than_equal_or<T: ModelOrd, I: IntoIterator<Item = Bool>>(&mut self,
-                                                                         prefix: I,
-                                                                         a: &T,
-                                                                         b: &T) {
+    pub fn less_than_equal_or<T: ModelOrd, I: IntoIterator<Item = Bool>>(
+        &mut self,
+        prefix: I,
+        a: &T,
+        b: &T,
+    ) {
         T::assert_less_or(self, prefix.into_iter().collect(), true, a, b);
     }
 
@@ -566,10 +574,10 @@ impl Solver {
     pub fn solver_name(&self) -> &'static str {
         if cfg!(feature = "glucose") {
             "Glucose v4.1"
-                // https://www.labri.fr/perso/lsimon/glucose/
+        // https://www.labri.fr/perso/lsimon/glucose/
         } else {
             "MiniSAT v2.1.0"
-                // http://minisat.se/
+            // http://minisat.se/
         }
     }
 }
@@ -582,17 +590,24 @@ impl Drop for Solver {
     }
 }
 
-use std::fmt;
-impl fmt::Debug for Solver {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-               "SAT instance ({}) {{ variables: {}, clauses: {} }}",
-               self.solver_name(),
-               self.num_vars(),
-               self.num_clauses())
+impl Default for Solver {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
+use std::fmt;
+impl fmt::Debug for Solver {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "SAT instance ({}) {{ variables: {}, clauses: {} }}",
+            self.solver_name(),
+            self.num_vars(),
+            self.num_clauses()
+        )
+    }
+}
 
 /// A model of a satisfiable instance, i.e. assignments to variables in the problem satisfying
 /// the asserted constraints.
@@ -604,10 +619,7 @@ pub trait ModelValue<'a> {
     fn value(&'a self, m: &'a Model) -> Self::T;
 }
 
-use std::iter::{once, empty};
-
-
-
+use std::iter::{empty, once};
 
 impl<'a> ModelValue<'a> for Bool {
     type T = bool;
@@ -636,14 +648,12 @@ impl<'a> Model<'a> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use super::unary::*;
     use super::binary::*;
-
-
+    use super::unary::*;
+    use super::*;
+    use quickcheck::quickcheck;
 
     #[test]
     fn sat() {
@@ -722,10 +732,12 @@ mod tests {
                 }
             };
 
-            sat.add_clause(vec![av, bv, cv, dv]
-                .into_iter()
-                .zip(vec![a, b, c, d])
-                .map(|(v, x)| if v { !x } else { x }));
+            sat.add_clause(
+                vec![av, bv, cv, dv]
+                    .into_iter()
+                    .zip(vec![a, b, c, d])
+                    .map(|(v, x)| if v { !x } else { x }),
+            );
         }
     }
 
@@ -856,7 +868,6 @@ mod tests {
         let b = Binary::new(&mut sat, 123123123123);
         let c = Binary::new(&mut sat, 1231231231239);
 
-
         sat.less_than(&Binary::constant(30), &a);
         sat.less_than(&a, &Binary::constant(90));
         sat.less_than(&Binary::constant(15), &b);
@@ -874,19 +885,18 @@ mod tests {
         println!("Solving {:?}", sat);
         match sat.solve() {
             Ok(m) => {
-                println!("a={}, b={}, c={}, d={}, e={}",
-                         m.value(&a),
-                         m.value(&b),
-                         m.value(&c),
-                         m.value(&d),
-                         m.value(&e));
+                println!(
+                    "a={}, b={}, c={}, d={}, e={}",
+                    m.value(&a),
+                    m.value(&b),
+                    m.value(&c),
+                    m.value(&d),
+                    m.value(&e)
+                );
                 // assert_eq!(m.value(&b), 100002);
             }
-            Err(()) => {
-                panic!()
-            }
+            Err(()) => panic!(),
         }
-
     }
 
     quickcheck! {
@@ -962,10 +972,10 @@ mod tests {
         }
     }
 
-    quickcheck!  {
+    quickcheck! {
         fn xor_literal_lits(lits :Vec<bool>) -> bool {
             let mut sat = Solver::new();
-            if lits.len() == 0 { return true; }
+            if lits.is_empty() { return true; }
             let lits = lits.iter().map(|_| sat.new_lit()).collect::<Vec<_>>();
             let xor = sat.xor_literal(lits.iter().cloned());
             sat.add_clause(vec![xor]); // assert odd parity of list of literals

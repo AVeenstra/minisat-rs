@@ -1,7 +1,8 @@
-use super::{Bool, Solver, Model, ModelEq, ModelOrd, ModelValue};
 use std::iter::once;
 
-#[derive(Debug,Clone)]
+use super::{Bool, Model, ModelEq, ModelOrd, ModelValue, Solver};
+
+#[derive(Debug, Clone)]
 pub struct Binary(Vec<Bool>);
 
 impl Binary {
@@ -15,7 +16,9 @@ impl Binary {
         Binary(lits)
     }
 
-    pub fn into_list(self) -> Vec<Bool> { self.0 }
+    pub fn into_list(self) -> Vec<Bool> {
+        self.0
+    }
 
     pub fn constant(x: usize) -> Binary {
         let mut v = Vec::new();
@@ -40,7 +43,8 @@ impl Binary {
     }
 
     pub fn count(&self, solver: &mut Solver) -> Binary {
-        let bins = self.0
+        let bins = self
+            .0
             .iter()
             .cloned()
             .map(|d| Binary::from_list(once(d)))
@@ -53,15 +57,12 @@ impl Binary {
     }
 
     pub fn add_list<'a, I: IntoIterator<Item = &'a Binary>>(solver: &mut Solver, xs: I) -> Binary {
-        Binary::add_bits(solver,
-                         xs.into_iter()
-                             .flat_map(|x| {
-                                 x.0
-                                     .iter()
-                                     .cloned()
-                                     .enumerate()
-                             })
-                             .collect())
+        Binary::add_bits(
+            solver,
+            xs.into_iter()
+                .flat_map(|x| x.0.iter().cloned().enumerate())
+                .collect(),
+        )
     }
 
     pub fn add_bits(solver: &mut Solver, xs: Vec<(usize, Bool)>) -> Binary {
@@ -70,28 +71,24 @@ impl Binary {
             bit: usize,
             val: Bool,
         };
-        let mut xs = xs.into_iter()
-            .map(|(bit, val)| {
-                Item {
-                    bit: bit,
-                    val: val,
-                }
-            })
+        let mut xs = xs
+            .into_iter()
+            .map(|(bit, val)| Item { bit, val })
             .collect::<Vec<_>>();
         xs.sort_by_key(|&Item { bit, .. }| bit);
         let mut out = Vec::new();
         let mut i = 0;
 
-        while xs.len() > 0 {
+        while !xs.is_empty() {
             if i < xs[0].bit {
                 out.push(false.into());
-                i = i + 1;
+                i += 1;
             } else if xs.len() >= 3 && xs[0].bit == xs[1].bit && xs[1].bit == xs[2].bit {
                 let Item { bit, val: a_val } = xs.remove(0);
-                let Item { bit: _, val: b_val } = xs.remove(0);
-                let Item { bit: _, val: c_val } = xs.remove(0);
-                let (v, c) = Binary::full_add(solver, a_val, b_val, c_val);
-                xs.push(Item { bit: bit, val: v });
+                let Item { val: b_val, .. } = xs.remove(0);
+                let Item { val: c_val, .. } = xs.remove(0);
+                let (val, c) = Binary::full_add(solver, a_val, b_val, c_val);
+                xs.push(Item { bit, val });
                 xs.push(Item {
                     bit: bit + 1,
                     val: c,
@@ -100,7 +97,7 @@ impl Binary {
                 i = bit;
             } else if xs.len() >= 2 && xs[0].bit == xs[1].bit {
                 let Item { bit, val: a_val } = xs.remove(0);
-                let Item { bit: _, val: b_val } = xs.remove(0);
+                let Item { val: b_val, .. } = xs.remove(0);
                 let (v, c) = Binary::full_add(solver, a_val, b_val, false.into());
                 out.push(v);
                 xs.push(Item {
@@ -138,18 +135,12 @@ impl Binary {
             solver.and_literal(once(a).chain(once(c)))
         } else if c == false.into() {
             solver.and_literal(once(a).chain(once(b)))
-        } else if a == b {
+        } else if a == b || b == !c {
             a
-        } else if b == c {
+        } else if b == c || a == !c {
             b
-        } else if a == c {
+        } else if a == c || a == !b {
             c
-        } else if a == !b {
-            c
-        } else if b == !c {
-            a
-        } else if a == !c {
-            b
         } else {
             let v = solver.new_lit();
             solver.add_clause(once(!a).chain(once(!b)).chain(once(v)));
@@ -167,7 +158,13 @@ impl Binary {
     }
 
     pub fn mul_digit(&self, solver: &mut Solver, y: Bool) -> Binary {
-        Binary(self.0.iter().cloned().map(|x| solver.and_literal(once(x).chain(once(y)))).collect())
+        Binary(
+            self.0
+                .iter()
+                .cloned()
+                .map(|x| solver.and_literal(once(x).chain(once(y))))
+                .collect(),
+        )
     }
 
     pub fn mul(&self, solver: &mut Solver, other: &Binary) -> Binary {
@@ -189,56 +186,61 @@ impl<'a> ModelValue<'a> for Binary {
         self.0
             .iter()
             .enumerate()
-            .map(|(i, x)| if m.value(x) {
-                (2 as usize).pow(i as u32)
-            } else {
-                0
+            .map(|(i, x)| {
+                if m.value(x) {
+                    (2 as usize).pow(i as u32)
+                } else {
+                    0
+                }
             })
             .sum()
     }
 }
 
-
 impl ModelOrd for Binary {
-    fn assert_less_or(solver: &mut Solver,
-                      prefix: Vec<Bool>,
-                      inclusive: bool,
-                      a: &Binary,
-                      b: &Binary) {
+    fn assert_less_or(
+        solver: &mut Solver,
+        prefix: Vec<Bool>,
+        inclusive: bool,
+        a: &Binary,
+        b: &Binary,
+    ) {
         use std::iter::repeat;
         let len = a.0.len().max(b.0.len());
-        let mut a_bits = a.0
-            .iter()
-            .cloned()
-            .chain(repeat(false.into()))
-            .take(len)
-            .collect::<Vec<_>>();
+        let mut a_bits =
+            a.0.iter()
+                .cloned()
+                .chain(repeat(false.into()))
+                .take(len)
+                .collect::<Vec<_>>();
         a_bits.reverse();
-        let mut b_bits = b.0
-            .iter()
-            .cloned()
-            .chain(repeat(false.into()))
-            .take(len)
-            .collect::<Vec<_>>();
+        let mut b_bits =
+            b.0.iter()
+                .cloned()
+                .chain(repeat(false.into()))
+                .take(len)
+                .collect::<Vec<_>>();
         b_bits.reverse();
-        <&[Bool]>::assert_less_or(solver,
-                                  prefix,
-                                  inclusive,
-                                  &&a_bits.as_slice(),
-                                  &&b_bits.as_slice());
+        <&[Bool]>::assert_less_or(
+            solver,
+            prefix,
+            inclusive,
+            &&a_bits.as_slice(),
+            &&b_bits.as_slice(),
+        );
     }
 }
-
-
 
 impl ModelEq for Binary {
     fn assert_equal_or(solver: &mut Solver, prefix: Vec<Bool>, a: &Binary, b: &Binary) {
         let mut i = 0;
         while i < a.0.len() || i < b.0.len() {
-            Bool::assert_equal_or(solver,
-                                  prefix.clone(),
-                                  a.0.get(i).unwrap_or(&false.into()),
-                                  b.0.get(i).unwrap_or(&false.into()));
+            Bool::assert_equal_or(
+                solver,
+                prefix.clone(),
+                a.0.get(i).unwrap_or(&false.into()),
+                b.0.get(i).unwrap_or(&false.into()),
+            );
             i += 1;
         }
     }
@@ -249,8 +251,8 @@ impl ModelEq for Binary {
         prefix.push(q);
 
         while i < a.0.len() || i < b.0.len() {
-            let ai = a.0.get(i).cloned().unwrap_or(false.into());
-            let bi = b.0.get(i).cloned().unwrap_or(false.into());
+            let ai = a.0.get(i).cloned().unwrap_or_else(|| false.into());
+            let bi = b.0.get(i).cloned().unwrap_or_else(|| false.into());
 
             Bool::assert_not_equal_or(solver, prefix.clone(), &ai, &bi);
             prefix.clear();

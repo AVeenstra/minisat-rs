@@ -1,4 +1,4 @@
-use super::{Solver, Bool};
+use super::{Bool, Solver};
 use std::iter::once;
 
 /// Object that can be compared and constrainted for equality.
@@ -12,7 +12,6 @@ pub trait ModelEq {
         q
     }
 }
-
 
 impl ModelEq for Bool {
     fn assert_equal_or(solver: &mut Solver, prefix: Vec<Bool>, a: &Bool, b: &Bool) {

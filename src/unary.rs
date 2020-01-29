@@ -1,7 +1,7 @@
-use super::{Bool, Solver, Model, ModelEq, ModelOrd, ModelValue};
+use super::{Bool, Model, ModelEq, ModelOrd, ModelValue, Solver};
 use std::iter::once;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Unary(Vec<Bool>);
 
 impl Unary {
@@ -26,19 +26,23 @@ impl Unary {
 
     /// Unary representation of the number of true literals in set.
     pub fn count<I: IntoIterator<Item = Bool>>(solver: &mut Solver, lits: I) -> Unary {
-        let lits = lits.into_iter().map(|x| Unary::from_bool(x)).collect();
+        let lits = lits.into_iter().map(Unary::from_bool).collect();
         Unary::sum(solver, lits)
     }
 
     /// The successor of the given number.
     pub fn succ(&self) -> Unary {
-        Unary(once(Bool::Const(true)).chain(self.0.iter().cloned()).collect())
+        Unary(
+            once(Bool::Const(true))
+                .chain(self.0.iter().cloned())
+                .collect(),
+        )
     }
 
     /// The predecessor of the given number, except if the number is zero in
     /// which case the returned number is also zero.
     pub fn pred(&self) -> Unary {
-        if self.0.len() == 0 {
+        if self.0.is_empty() {
             Unary::constant(0)
         } else {
             Unary(self.0.iter().cloned().skip(1).collect())
@@ -62,7 +66,7 @@ impl Unary {
         } else if x >= self.0.len() as isize {
             Bool::Const(false)
         } else {
-            (self.0)[x as usize]
+            self.0[x as usize]
         }
     }
 
@@ -87,13 +91,25 @@ impl Unary {
     /// Multiply a `Unary` by a non-negative integer constant.
     pub fn mul_const(&self, c: usize) -> Unary {
         use std::iter::repeat;
-        Unary(self.0.iter().flat_map(|i| repeat(i).take(c)).cloned().collect())
+        Unary(
+            self.0
+                .iter()
+                .flat_map(|i| repeat(i).take(c))
+                .cloned()
+                .collect(),
+        )
     }
 
     /// Integer division of a `Unary` by a non-negative integer constant.
     pub fn div_const(&self, c: usize) -> Unary {
         assert!(c > 0);
-        Unary(self.0.chunks(c).flat_map(|x| x.get(c - 1)).cloned().collect())
+        Unary(
+            self.0
+                .chunks(c)
+                .flat_map(|x| x.get(c - 1))
+                .cloned()
+                .collect(),
+        )
     }
 
     // pub fn mod_const(&self, c :usize) -> Unary {
@@ -108,7 +124,12 @@ impl Unary {
     /// Addition by a non-negative integer constant.
     pub fn add_const(&self, c: usize) -> Unary {
         use std::iter::repeat;
-        Unary(repeat(Bool::Const(true)).take(c).chain(self.0.iter().cloned()).collect())
+        Unary(
+            repeat(Bool::Const(true))
+                .take(c)
+                .chain(self.0.iter().cloned())
+                .collect(),
+        )
     }
 
     /// Add two `Unary` numbers.
@@ -128,10 +149,10 @@ impl Unary {
 
     fn merge(sat: &mut Solver, bound: usize, mut a: Vec<Bool>, mut b: Vec<Bool>) -> Vec<Bool> {
         use itertools::Itertools;
-        if a.len() == 0 {
+        if a.is_empty() {
             b.truncate(bound);
             b
-        } else if b.len() == 0 {
+        } else if b.is_empty() {
             a.truncate(bound);
             a
         } else if bound == 0 && a.len() == 1 && b.len() == 1 {
@@ -150,16 +171,22 @@ impl Unary {
             while b.len() < a.len() / 2 * 2 {
                 b.push(Bool::Const(false));
             }
-            let firsts = Self::merge(sat,
-                                     bound,
-                                     a.iter().cloned().step_by(2).collect(),
-                                     b.iter().cloned().step_by(2).collect());
-            let seconds = Self::merge(sat,
-                                      bound,
-                                      a.iter().cloned().skip(1).step_by(2).collect(),
-                                      b.iter().cloned().skip(1).step_by(2).collect());
-            let interleaved =
-                firsts.into_iter().interleave(seconds.into_iter()).collect::<Vec<_>>();
+            let firsts = Self::merge(
+                sat,
+                bound,
+                a.iter().cloned().step_by(2).collect(),
+                b.iter().cloned().step_by(2).collect(),
+            );
+            let seconds = Self::merge(
+                sat,
+                bound,
+                a.iter().cloned().skip(1).step_by(2).collect(),
+                b.iter().cloned().skip(1).step_by(2).collect(),
+            );
+            let interleaved = firsts
+                .into_iter()
+                .interleave(seconds.into_iter())
+                .collect::<Vec<_>>();
 
             let mut v = Vec::new();
             v.push(interleaved[0]);
@@ -181,7 +208,7 @@ impl Unary {
 
     /// Truncated sum.
     pub fn sum_truncate(sat: &mut Solver, mut xs: Vec<Unary>, bound: usize) -> Unary {
-        if xs.len() == 0 {
+        if xs.is_empty() {
             Unary::constant(0)
         } else if xs.len() == 1 {
             xs[0].clone()
@@ -196,11 +223,13 @@ impl Unary {
 
     /// Multiply by a single digit given as a `Bool`.
     pub fn mul_digit(&self, sat: &mut Solver, other: Bool) -> Unary {
-        Unary(self.0
-            .iter()
-            .cloned()
-            .map(|x| sat.and_literal(once(x).chain(once(other))))
-            .collect())
+        Unary(
+            self.0
+                .iter()
+                .cloned()
+                .map(|x| sat.and_literal(once(x).chain(once(other))))
+                .collect(),
+        )
     }
 
     /// Multiply Unary numbers.
@@ -208,7 +237,8 @@ impl Unary {
         if self.bound() > other.bound() {
             other.mul(sat, self)
         } else {
-            let terms = self.0
+            let terms = self
+                .0
                 .iter()
                 .cloned()
                 .map(|x| other.mul_digit(sat, x))
@@ -219,24 +249,27 @@ impl Unary {
 }
 
 impl ModelOrd for Unary {
-    fn assert_less_or(solver: &mut Solver,
-                      prefix: Vec<Bool>,
-                      inclusive: bool,
-                      a: &Unary,
-                      b: &Unary) {
+    fn assert_less_or(
+        solver: &mut Solver,
+        prefix: Vec<Bool>,
+        inclusive: bool,
+        a: &Unary,
+        b: &Unary,
+    ) {
         if !inclusive {
             Self::assert_less_or(solver, prefix, true, &a.succ(), b);
         } else {
             for i in 0..(a.0.len()) {
                 if i < b.0.len() {
-                    solver.add_clause(prefix.iter()
-                        .cloned()
-                        .chain(once(!(a.0)[i]))
-                        .chain(once((b.0)[i])));
+                    solver.add_clause(
+                        prefix
+                            .iter()
+                            .cloned()
+                            .chain(once(!a.0[i]))
+                            .chain(once(b.0[i])),
+                    );
                 } else {
-                    solver.add_clause(prefix.iter()
-                        .cloned()
-                        .chain(once(!(a.0)[i])));
+                    solver.add_clause(prefix.iter().cloned().chain(once(!a.0[i])));
                     break;
                 }
             }
@@ -265,6 +298,6 @@ impl<'a> ModelValue<'a> for Unary {
             .enumerate()
             .find(|(_i, x)| !m.value(*x))
             .map(|(v, _)| v)
-            .unwrap_or(self.0.len())
+            .unwrap_or_else(|| self.0.len())
     }
 }

@@ -9,6 +9,7 @@ documentation="https://docs.rs/minisat"
 repository="https://github.com/luteberget/minisat-rs/"
 categories=["api-bindings","science"]
 license="MIT"
+edition = "2018"
 
 [dependencies]
 itertools = "0.8"
