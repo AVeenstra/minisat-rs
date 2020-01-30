@@ -102,7 +102,7 @@ impl Unary {
 
     /// Integer division of a `Unary` by a non-negative integer constant.
     pub fn div_const(&self, c: usize) -> Unary {
-        assert!(c > 0);
+        debug_assert_ne!(c, 0);
         Unary(
             self.0
                 .chunks(c)
