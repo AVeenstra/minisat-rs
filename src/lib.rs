@@ -302,6 +302,41 @@ impl Solver {
         }
     }
 
+    /// Solve the SAT instance under given assumptions, returning a solution (`Model`) if the
+    /// instance is satisfiable, or returning an `Err(())` if the problem
+    /// is unsatisfiable.
+    ///
+    /// The conjunction of the given literals are temporarily added to the SAT instance,
+    /// so the result is the same as if each literal was added as a clause, but
+    /// the solver object can be re-used afterwards and does then not contain these assumptions.
+    /// This interface can be used to build SAT instances incrementally.
+    pub fn solve_under_borrowed_assumptions(
+        &mut self,
+        lits: &[Bool],
+    ) -> Result<Model, ()> {
+        unsafe {
+            minisat_solve_begin(self.ptr);
+        }
+        for lit in lits {
+            match lit {
+                Bool::Const(false) => return Err(()),
+                Bool::Const(true) => {}
+                Bool::Lit(Lit(ptr, l)) => {
+                    debug_assert_eq!(*ptr, self.ptr);
+                    unsafe {
+                        minisat_solve_addLit(*ptr, *l);
+                    }
+                }
+            }
+        }
+        let sat = unsafe { minisat_solve_commit(self.ptr) } > 0;
+        if sat {
+            Ok(Model(self))
+        } else {
+            Err(())
+        }
+    }
+
     /// Return a literal representing the conjunction of the given booleans.
     pub fn and_literal<I: IntoIterator<Item = Bool>>(&mut self, xs: I) -> Bool {
         use std::collections::HashSet;
