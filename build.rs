@@ -4,61 +4,39 @@ extern crate cc;
 use std::env;
 use std::path::PathBuf;
 
-#[cfg(not(feature = "glucose"))]
 pub fn main() {
-    cc::Build::new()
-        .cpp(true)
-        .include("lib/minisat")
+    let mut builder = cc::Build::new();
+    builder.cpp(true)
         .include("lib")
-        .file("lib/minisat/minisat/core/Solver.cc")
-        .file("lib/minisat/minisat/simp/SimpSolver.cc")
-        .file("lib/minisat/minisat/utils/System.cc")
-        //.file("lib/minisat/minisat/utils/Options.cc")
-        .file("lib/minisat-c-bindings/minisat.cc")
+        .include("/usr/include/")
         .define("__STDC_LIMIT_MACROS", None)
-        .define("__STDC_FORMAT_MACROS", None)
-        .include("/usr/include")
-        .compile("minisat");
+        .define("__STDC_FORMAT_MACROS", None);
 
-    let bindings = bindgen::Builder::default()
-        .clang_arg("-Ilib/minisat-c-bindings")
-        .header("wrapper.h")
-        .generate()
-        .expect("Could not create bindings to library");
+    if cfg!(feature = "glucose") {
+        builder
+            .include("lib/glucose-syrup-4.1")
+            .file("lib/glucose-syrup-4.1/core/Solver.cc")
+            .file("lib/glucose-syrup-4.1/simp/SimpSolver.cc")
+            .file("lib/glucose-syrup-4.1/utils/System.cc")
+            .file("lib/minisat-c-bindings/minisat.cc")
+            .flag("-std=c++11")
+            .define("USE_GLUCOSE", None)
+            .compile("minisat");
+    } else {
+        builder
+            .include("lib/minisat")
+            .file("lib/minisat/minisat/core/Solver.cc")
+            .file("lib/minisat/minisat/simp/SimpSolver.cc")
+            .file("lib/minisat/minisat/utils/System.cc")
+            .file("lib/minisat-c-bindings/minisat.cc")
+            .compile("minisat");
+    }
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
-}
-
-#[cfg(feature = "glucose")]
-pub fn main() {
-    cc::Build::new()
-        .cpp(true)
-        //.include("lib/minisat")
-        .include("lib/glucose-syrup-4.1")
-        .include("lib")
-        .file("lib/glucose-syrup-4.1/core/Solver.cc")
-        .file("lib/glucose-syrup-4.1/simp/SimpSolver.cc")
-        .file("lib/glucose-syrup-4.1/utils/System.cc")
-        //.file("lib/minisat/minisat/utils/Options.cc")
-        .file("lib/minisat-c-bindings/minisat.cc")
-        .flag("-std=c++11")
-        .define("__STDC_LIMIT_MACROS", None)
-        .define("__STDC_FORMAT_MACROS", None)
-        .define("USE_GLUCOSE", None)
-        .include("/usr/include")
-        .compile("minisat");
-
-    let bindings = bindgen::Builder::default()
-        .clang_arg("-Ilib/minisat-c-bindings")
-        .header("wrapper.h")
+    bindgen::Builder::default()
+        .header("lib/minisat-c-bindings/minisat.h")
         .generate()
-        .expect("Could not create bindings to library");
-
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
+        .expect("Could not create bindings to library")
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
 }
